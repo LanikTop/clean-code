@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Markdown.Tokens
+﻿namespace Markdown.Tokens
 {
-    public sealed record LinkTailToken : Token
+    internal sealed record LinkTailToken : Token
     {
         public string Url { get; }
         public bool Closed { get; }

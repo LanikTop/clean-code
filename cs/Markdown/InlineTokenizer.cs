@@ -1,12 +1,8 @@
 ﻿using Markdown.Tokens;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Markdown
 {
-    public class InlineTokenizer
+    internal class InlineTokenizer
     {
         public static Token[] Tokenize(string text)
         {
@@ -14,98 +10,141 @@ namespace Markdown
                 return Array.Empty<Token>();
 
             var tokens = new List<Token>();
-            var textStart = -1;
+            var startTextTokenIdx = -1;
 
-            var i = 0;
-            var n = text.Length;
+            var currentIdx = 0;
+            var textLength = text.Length;
 
             void FlushText(int endText)
             {
-                if (textStart < 0) return;
-                tokens.Add(new TextToken(text.Substring(textStart, endText - textStart)));
-                textStart = -1;
+                if (startTextTokenIdx < 0) return;
+                tokens.Add(new TextToken(text.Substring(startTextTokenIdx, endText - startTextTokenIdx)));
+                startTextTokenIdx = -1;
             }
 
-            while (i < n)
+            while (currentIdx < textLength)
             {
-                var c = text[i];
-                if (c == '\\' && i + 1 < n && IsEscapable(text[i + 1]))
+                var currentChar = text[currentIdx];
+                (Token? token, int nextIndex) handleResult;
+
+                if (currentChar == '\\' && currentIdx + 1 < textLength && IsCharEscapable(text[currentIdx + 1]))
                 {
-                    FlushText(i);
-                    tokens.Add(new EscapedToken(text[i + 1]));
-                    i += 2;
+                    handleResult = HandleEscapeToken(currentIdx, text);
                 }
-                else if (c == '_')
+                else if (currentChar == '_')
                 {
-                    var j = i;
-                    while (j < n && text[j] == '_') j++;
-                    var runLength = j - i;
-
-                    if (runLength > 2)
-                    {
-                        if (textStart == -1) textStart = i;
-                        i = j;
-                        continue;
-                    }
-
-                    char? left = i > 0 ? text[i - 1] : (char?)null;
-                    char? right = j < n ? text[j] : (char?)null;
-
-                    var leftEscaped = i > 1 && text[i - 2] == '\\' && IsEscapable(text[i - 1]);
-                    var rightEscaped = j < n - 1 && text[j] == '\\' && IsEscapable(text[j + 1]);
-
-                    var leftIsSpace = !left.HasValue || char.IsWhiteSpace(left.Value);
-                    var rightIsSpace = !right.HasValue || char.IsWhiteSpace(right.Value);
-                    var bothNonSpace = !leftIsSpace && !rightIsSpace;
-                    var hasDigit = (left.HasValue && char.IsDigit(left.Value))
-                                 || (right.HasValue && char.IsDigit(right.Value));
-
-                    if (bothNonSpace && hasDigit)
-                    {
-                        if (textStart == -1) textStart = i;
-                        i = j;
-                        continue;
-                    }
-
-                    FlushText(i);
-                    tokens.Add(new UnderscoreToken(runLength, left, right, leftEscaped, rightEscaped));
-                    i = j;
+                    handleResult = HandleUnderscoreToken(currentIdx, text);
                 }
-                else if (c == '[')
+                else if (currentChar == '[')
                 {
-                    FlushText(i);
-                    tokens.Add(new BracketOpenToken());
-                    i++;
+                    handleResult = HandleBracketOpenToken(currentIdx);
                 }
-                else if (c == ']' && i + 1 < n && text[i + 1] == '(')
+                else if (currentChar == ']' && currentIdx + 1 < textLength && text[currentIdx + 1] == '(')
                 {
-                    FlushText(i);
-                    var j = i + 2;
-                    while (j < n && text[j] != ')') j++;
-
-                    if (j < n)
-                    {
-                        tokens.Add(new LinkTailToken(text.Substring(i + 2, j - i - 2), true));
-                        i = j + 1;
-                    }
-                    else
-                    {
-                        tokens.Add(new LinkTailToken(text.Substring(i + 2), false));
-                        i = n;
-                    }
+                    handleResult = HandleLinkTailToken(currentIdx, text);
                 }
                 else
                 {
-                    if (textStart == -1) textStart = i;
-                    i++;
+                    if (startTextTokenIdx == -1) 
+                    { 
+                        startTextTokenIdx = currentIdx;
+                    }
+                    currentIdx++;
+                    continue;
                 }
+
+                if (handleResult.token != null)
+                {
+                    FlushText(currentIdx);
+                    tokens.Add(handleResult.token);
+                }
+                else
+                {
+                    if (startTextTokenIdx == -1)
+                    {
+                        startTextTokenIdx = currentIdx;
+                    }
+                }
+
+                currentIdx = handleResult.nextIndex;
+
             }
 
-            FlushText(n);
+            FlushText(textLength);
             return tokens.ToArray();
         }
 
-        private static bool IsEscapable(char c)
+        private static (Token? token, int nextIndex) HandleEscapeToken(int currentIdx, string text)
+        {
+            var token = new EscapedToken(text[currentIdx + 1]);
+            return (token, currentIdx + 2);
+        }
+
+        private static (Token? token, int nextIndex) HandleUnderscoreToken(int currentIdx, string text)
+        {
+            var endUnderscoreIdx = currentIdx;
+            var textLength = text.Length;
+
+            while (endUnderscoreIdx < textLength && text[endUnderscoreIdx] == '_')
+            {
+                endUnderscoreIdx++;
+            }
+            var runLength = endUnderscoreIdx - currentIdx;
+
+            if (runLength > 2)
+            {
+                return (null, endUnderscoreIdx);
+            }
+
+            char? left = currentIdx > 0 ? text[currentIdx - 1] : null;
+            char? right = endUnderscoreIdx < textLength ? text[endUnderscoreIdx] : null;
+
+            var leftEscaped = currentIdx > 1 && text[currentIdx - 2] == '\\' && IsCharEscapable(text[currentIdx - 1]);
+            var rightEscaped = endUnderscoreIdx < textLength - 1 && text[endUnderscoreIdx] == '\\' && IsCharEscapable(text[endUnderscoreIdx + 1]);
+
+            var leftIsSpace = !left.HasValue || char.IsWhiteSpace(left.Value);
+            var rightIsSpace = !right.HasValue || char.IsWhiteSpace(right.Value);
+            var bothNonSpace = !leftIsSpace && !rightIsSpace;
+            var hasDigit = (left.HasValue && char.IsDigit(left.Value))
+                         || (right.HasValue && char.IsDigit(right.Value));
+
+            if (bothNonSpace && hasDigit)
+            {
+                return (null, endUnderscoreIdx);
+            }
+
+            var token = new UnderscoreToken(runLength, left, right, leftEscaped, rightEscaped);
+            return (token, endUnderscoreIdx);
+        }
+
+        private static (Token? token, int nextIndex) HandleBracketOpenToken(int currentIdx)
+        {
+            return (new BracketOpenToken(), currentIdx + 1);
+        }
+
+        private static (Token? token, int nextIndex) HandleLinkTailToken(int currentIdx, string text)
+        {
+            var endLinkIdx = currentIdx;
+            var textLength = text.Length;
+
+            while (endLinkIdx < textLength && text[endLinkIdx] != ')')
+            {
+                endLinkIdx++;
+            }
+
+            if (endLinkIdx < textLength)
+            {
+                var token = new LinkTailToken(text.Substring(currentIdx + 2, endLinkIdx - currentIdx - 2), true);
+                return (token, endLinkIdx + 1);
+            }
+            else
+            {
+                var token = new LinkTailToken(text.Substring(currentIdx + 2), false);
+                return (token, textLength);
+            }
+        }
+
+        private static bool IsCharEscapable(char c)
             => c == '_' || c == '\\' || c == '[' || c == ']' || c == '(' || c == ')';
     }
 }

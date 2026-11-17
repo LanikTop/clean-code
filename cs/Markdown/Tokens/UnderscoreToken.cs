@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Markdown.Tokens
+﻿namespace Markdown.Tokens
 {
-    public sealed record UnderscoreToken : Token
+    internal sealed record UnderscoreToken : Token
     {
         public int Length { get; }
         public char? Left { get; }

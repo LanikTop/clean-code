@@ -1,10 +1,10 @@
 ﻿using FluentAssertions;
 using NUnit.Framework;
 
-namespace Markdown.Tests
+namespace Markdown.Tests.Tests
 {
     [TestFixture]
-    public class Markdown_Tests
+    public class MarkdownTests
     {
         [TestCase("# Heading", "<h1>Heading</h1>")]
         [TestCase("# Heading _With em text_", "<h1>Heading <em>With em text</em></h1>")]
@@ -66,13 +66,47 @@ namespace Markdown.Tests
             Md.Render(input).Should().Be(expected);
         }
 
+        [TestCase("""
+            abc
+            # like
+            cd
+            ef
+
+            po
+            """, "<p>abc</p>{Environment.NewLine}<h1>like</h1>{Environment.NewLine}<p>cd ef</p>{Environment.NewLine}<p>po</p>")]
+        [TestCase("""
+            abc
+            # like
+            cd
+            ef
+                
+                
+            po
+            """, "<p>abc</p>{Environment.NewLine}<h1>like</h1>{Environment.NewLine}<p>cd ef</p>{Environment.NewLine}<p>po</p>")]
+        [TestCase("""
+                 
+                  
+                
+             
+            """, "<p></p>")]
+        [TestCase("""
+               п
+             
+                  привет
+
+            """, "<p>   п</p>{Environment.NewLine}<p>      привет</p>")]
+        public void Markdown_RenderMultiLine_ReturnsExpectedResult(string input, string expected)
+        {
+            expected = expected.Replace("{Environment.NewLine}", Environment.NewLine);
+            Md.Render(input).Should().Be(expected);
+        }
 
         [Test]
         public void Markdown_Render_ReturnsExpectedResultInRealTests()
         {
-            string input = Path.Combine(AppContext.BaseDirectory, "RealFileTests", "methodical_text.txt");
-            string expected = Path.Combine(AppContext.BaseDirectory, "RealFileTests", "methodical_text_html.txt");
-            Md.Render(File.ReadAllText(input).ToString()!).Should().Be(File.ReadAllText(expected).Replace("\r\n", "\n"));
+            var input = Path.Combine(AppContext.BaseDirectory, "RealFileTests", "methodical_text.txt");
+            var expected = Path.Combine(AppContext.BaseDirectory, "RealFileTests", "methodical_text_html.txt");
+            Md.Render(File.ReadAllText(input).ToString()!).Should().Be(File.ReadAllText(expected));
         }
     }
 }

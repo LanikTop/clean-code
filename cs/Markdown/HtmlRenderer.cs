@@ -1,17 +1,14 @@
 ﻿using Markdown.InlinePieces;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Web;
+using Markdown.Models;
 
 namespace Markdown
 {
-    public static class HtmlRenderer
+    internal static class HtmlRenderer
     {
         public static string Render(RenderedBlock[] blocks)
         {
             if (blocks.Length == 0)
-                return string.Empty;
+                return "<p></p>";
 
             var htmlStrings = new string[blocks.Length];
 
@@ -20,26 +17,27 @@ namespace Markdown
                 htmlStrings[i] = RenderBlock(blocks[i]);
             }
 
-            return string.Join("\n", htmlStrings);
+            return string.Join(Environment.NewLine, htmlStrings);
         }
 
         private static string RenderBlock(RenderedBlock block)
         {
             var htmlBlock = RenderInlinePieces(block.InlinePieces);
 
-            if (block.Type == BlockType.Heading)
-                return $"<h1>{htmlBlock}</h1>";
-            else
-                return $"<p>{htmlBlock}</p>";
+            switch (block.Type)
+            {
+                case BlockType.Heading:
+                    return $"<h1>{htmlBlock}</h1>";
+                case BlockType.Paragraph:
+                    return $"<p>{htmlBlock}</p>";
+                default:
+                    throw new ArgumentException();
+            }
         }
 
-        private static string RenderInlinePieces(InlinePiece[] pieces)
+        private static string RenderInlinePieces(InlinePiece[] pieces)      
         {
-            var htmlPieces = new string[pieces.Length];
-            for (var i = 0; i < pieces.Length; i++)
-            {
-                htmlPieces[i] = RenderInlinePiece(pieces[i]);
-            }
+            var htmlPieces = pieces.Select(RenderInlinePiece);
 
             return string.Join("", htmlPieces);
         }
@@ -51,11 +49,11 @@ namespace Markdown
                 case TextInlinePiece text:
                     return text.Text;
                 case EmInlinePiece em:
-                    return @$"<em>{RenderInlinePieces(em.Children)}</em>";
+                    return @$"<em>{RenderInlinePieces(em.Children.ToArray())}</em>";
                 case StrongInlinePiece strong:
-                    return @$"<strong>{RenderInlinePieces(strong.Children)}</strong>";
+                    return @$"<strong>{RenderInlinePieces(strong.Children.ToArray())}</strong>";
                 case LinkInlinePiece link:
-                    return $"<a href=\"{link.Url}\">{RenderInlinePieces(link.Children)}</a>";
+                    return $"<a href=\"{link.Url}\">{RenderInlinePieces(link.Children.ToArray())}</a>";
                 default:
                     throw new ArgumentException();
 

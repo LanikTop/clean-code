@@ -1,66 +1,46 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Markdown.Models;
 
 namespace Markdown
 {
-    public static class RawBlockParser
+    internal class RawBlockParser
     {
-        public static RawBlock[] Parse(string text)
-        {
+        private List<string> paragraphBuffer = new();
+        private List<RawBlock> blocks = new();
 
+        public RawBlock[] Parse(string text)
+        {
             if (string.IsNullOrEmpty(text))
                 return Array.Empty<RawBlock>();
 
-            var blocks = new List<RawBlock>();
-            var paragraphBuffer = new List<string>();
-
-            foreach (var rawLine in text.Split('\n'))
+            foreach (var line in text.Split(Environment.NewLine))
             {
-                var line = rawLine.Trim();
 
                 if (string.IsNullOrWhiteSpace(line))
                 {
-                    FlushParagraph(paragraphBuffer, blocks);
+                    TryCreateParagraphBlock();
                     continue;
                 }
 
                 if (line.Length >= 2 && line[0] == '#' && line[1] == ' ')
                 {
-                    FlushParagraph(paragraphBuffer, blocks);
+                    TryCreateParagraphBlock();
                     blocks.Add(new RawBlock(BlockType.Heading, line.Substring(2)));
                 }
                 else
+                {
                     paragraphBuffer.Add(line);
+                }
             }
 
-            FlushParagraph(paragraphBuffer, blocks);
+            TryCreateParagraphBlock();
             return blocks.ToArray();
         }
 
-        private static void FlushParagraph(List<string> buffer, List<RawBlock> blocks)
+        private void TryCreateParagraphBlock()
         {
-            if (buffer.Count == 0) return;
-            blocks.Add(new RawBlock(BlockType.Paragraph, string.Join(" ", buffer)));
-            buffer.Clear();
+            if (paragraphBuffer.Count == 0) return;
+            blocks.Add(new RawBlock(BlockType.Paragraph, string.Join(" ", paragraphBuffer)));
+            paragraphBuffer.Clear();
         }
-    }
-
-    public class RawBlock
-    {
-        public BlockType Type { get; }
-        public string Content { get; }
-
-        public RawBlock(BlockType type, string content)
-        {
-            Type = type;
-            Content = content;
-        }
-    }
-
-    public enum BlockType
-    {
-        Heading,
-        Paragraph
     }
 }

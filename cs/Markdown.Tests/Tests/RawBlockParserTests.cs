@@ -1,30 +1,31 @@
 ﻿using FluentAssertions;
+using Markdown.Models;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Markdown.Tests
+namespace Markdown.Tests.Tests
 {
     [TestFixture]
-    public class RawBlockParser_Tests
+    public class RawBlockParserTests
     {
         [Test]
         public void RawBlockParser_Parse_ReturnsExpectedRawBlocksInSmallTests()
         {
-            RawBlockParser.Parse("# Heading").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("# Heading").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Heading, "Heading")]);
-            RawBlockParser.Parse("# Heading _With em text_").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("# Heading _With em text_").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Heading, "Heading _With em text_")]);
-            RawBlockParser.Parse("# Heading __With strong text__").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("# Heading __With strong text__").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Heading, "Heading __With strong text__")]);
-            RawBlockParser.Parse("abc").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("abc").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Paragraph, "abc")]);
-            RawBlockParser.Parse("abc _em_ __strong__").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("abc _em_ __strong__").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Paragraph, "abc _em_ __strong__")]);
-            RawBlockParser.Parse("# Заголовок\nА тут обычный параграф").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("# Заголовок\r\nА тут обычный параграф").Should().BeEquivalentTo(
                 [new RawBlock(BlockType.Heading, "Заголовок"), new RawBlock(BlockType.Paragraph, "А тут обычный параграф")]);
-            RawBlockParser.Parse("# Заголовок\nА тут обычный параграф\n# И снова заголовок").Should().BeEquivalentTo(
+            new RawBlockParser().Parse("# Заголовок\r\nА тут обычный параграф\r\n# И снова заголовок").Should().BeEquivalentTo(
                 [
                 new RawBlock(BlockType.Heading, "Заголовок"),
                 new RawBlock(BlockType.Paragraph, "А тут обычный параграф"),
@@ -68,7 +69,7 @@ namespace Markdown.Tests
                 new RawBlock(BlockType.Paragraph, @"\<h1>Заголовок \<strong>с \<em>разными\</em> символами\</strong>\</h1>"),
             };
 
-            RawBlockParser.Parse(input).Should().BeEquivalentTo(expected);
+            new RawBlockParser().Parse(input).Should().BeEquivalentTo(expected);
         }
     }
 }

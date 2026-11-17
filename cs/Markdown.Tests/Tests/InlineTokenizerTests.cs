@@ -1,14 +1,11 @@
 ﻿using FluentAssertions;
 using Markdown.Tokens;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Markdown.Tests
+namespace Markdown.Tests.Tests
 {
     [TestFixture]
-    public class InlineTokenizer_Tests
+    public class InlineTokenizerTests
     {
         [Test]
         public void InlineTokenizer_Tokenize_ReturnsExpectedTokensSmallTests()

@@ -1,59 +1,62 @@
 ﻿using Markdown.InlinePieces;
+using Markdown.Models;
 using Markdown.Tokens;
 
 namespace Markdown
 {
-    public class InlineResolver
+    internal class InlineResolver
     {
-        public static InlinePiece[] Resolve(Token[] tokens)
+        private Stack<OpenContainer> stack = new();
+
+        public InlinePiece[] Resolve(Token[] tokens)
         {
             if (tokens.Length == 0)
                 return Array.Empty<InlinePiece>();
 
             var root = new OpenContainer { Kind = ContainerKind.Root };
-            var stack = new List<OpenContainer> { root };
+            stack.Push(root);
 
             foreach (var token in tokens)
             {
                 switch (token)
                 {
                     case TextToken t:
-                        AddText(stack, t.Text);
+                        AddText(t.Text);
                         break;
                     case EscapedToken e:
-                        AddText(stack, e.EscapedChar.ToString());
+                        AddText(e.EscapedChar.ToString());
                         break;
                     case UnderscoreToken u:
-                        ProcessUnderscore(stack, u);
+                        ProcessUnderscore(u);
                         break;
                     case BracketOpenToken:
-                        stack.Add(new OpenContainer { Kind = ContainerKind.Link, OpenerText = "[" });
+                        stack.Push(new OpenContainer { Kind = ContainerKind.Link, OpenerText = "[" });
                         break;
                     case LinkTailToken lt:
-                        ProcessLinkTail(stack, lt);
+                        ProcessLinkTail(lt);
                         break;
                 }
             }
 
             while (stack.Count > 1)
-                PopAsLiteral(stack);
+                PopAsLiteral();
 
             return MergeText(root.Children.ToArray());
         }
 
-        private static void AddText(List<OpenContainer> stack, string text)
+        private void AddText(string text)
         {
-            var top = stack[^1];
+            var top = stack.Peek();
             top.Children.Add(new TextInlinePiece(text));
             if (text.Any(char.IsWhiteSpace))
                 top.HasWhitespace = true;
         }
 
-        private static void ProcessUnderscore(List<OpenContainer> stack, UnderscoreToken u)
+        private void ProcessUnderscore(UnderscoreToken u)
         {
             var targetKind = u.Length == 1 ? ContainerKind.Em : ContainerKind.Strong;
             var text = u.Length == 1 ? "_" : "__";
-            var top = stack[^1];
+            var top = stack.Peek();
 
             var canOpen = u.Right.HasValue && !char.IsWhiteSpace(u.Right.Value);
             var canClose = u.Left.HasValue && !char.IsWhiteSpace(u.Left.Value);
@@ -63,12 +66,12 @@ namespace Markdown
             {
                 if (CanClosePair(top, u))
                 {
-                    CloseContainer(stack, targetKind);
+                    CloseContainer(targetKind);
                     return;
                 }
 
-                PopAsLiteral(stack);
-                AddText(stack, text);
+                PopAsLiteral();
+                AddText(text);
                 return;
             }
 
@@ -76,12 +79,12 @@ namespace Markdown
             if (canClose && (top.Kind == ContainerKind.Em || top.Kind == ContainerKind.Strong)
                          && top.Kind != targetKind)
             {
-                var matchIdx = FindKindInStack(stack, targetKind);
+                var matchIdx = FindKindInStack(targetKind);
                 if (matchIdx >= 0)
                 {
                     while (stack.Count > matchIdx)
-                        PopAsLiteral(stack);
-                    AddText(stack, text);
+                        PopAsLiteral();
+                    AddText(text);
                     return;
                 }
             }
@@ -90,13 +93,13 @@ namespace Markdown
             if (canOpen)
             {
                 // Внутри одинарного двойное не работает
-                if (targetKind == ContainerKind.Strong && ContainsKind(stack, ContainerKind.Em))
+                if (targetKind == ContainerKind.Strong && ContainsKind(ContainerKind.Em))
                 {
-                    AddText(stack, text);
+                    AddText(text);
                     return;
                 }
 
-                stack.Add(new OpenContainer
+                stack.Push(new OpenContainer
                 {
                     Kind = targetKind,
                     OpenerText = text,
@@ -107,7 +110,7 @@ namespace Markdown
             }
 
             // 4) Мы никто
-            AddText(stack, text);
+            AddText(text);
         }
 
         private static bool CanClosePair(OpenContainer top, UnderscoreToken closer)
@@ -124,11 +127,10 @@ namespace Markdown
             return c.HasValue && !char.IsWhiteSpace(c.Value);
         }
 
-        private static void CloseContainer(List<OpenContainer> stack, ContainerKind kind)
+        private void CloseContainer(ContainerKind kind)
         {
-            var c = stack[^1];
-            stack.RemoveAt(stack.Count - 1);
-            var parent = stack[^1];
+            var c = stack.Pop();
+            var parent = stack.Peek();
             var children = MergeText(c.Children.ToArray());
 
             InlinePiece piece = kind switch
@@ -155,63 +157,55 @@ namespace Markdown
             return result.ToArray();
         }
 
-        private static void PopAsLiteral(List<OpenContainer> stack)
+        private void PopAsLiteral()
         {
-            var c = stack[^1];
-            stack.RemoveAt(stack.Count - 1);
-            var parent = stack[^1];
+            var c = stack.Pop();
+            var parent = stack.Peek();
             parent.Children.Add(new TextInlinePiece(c.OpenerText));
             parent.Children.AddRange(c.Children);
             if (c.HasWhitespace || c.OpenerText.Any(char.IsWhiteSpace))
                 parent.HasWhitespace = true;
         }
 
-        private static int FindKindInStack(List<OpenContainer> stack, ContainerKind kind)
+        private int FindKindInStack(ContainerKind kind)
         {
-            for (int i = stack.Count - 1; i > 0; i--)
-                if (stack[i].Kind == kind) return i;
+            var depth = 1;
+
+            foreach (var c in stack)
+            {
+                if (c.Kind == kind) return depth;
+                depth++;
+            }
+
             return -1;
         }
 
-        private static bool ContainsKind(List<OpenContainer> stack, ContainerKind kind)
+        private bool ContainsKind(ContainerKind kind)
         {
             foreach (var c in stack)
                 if (c.Kind == kind) return true;
             return false;
         }
 
-        private static void ProcessLinkTail(List<OpenContainer> stack, LinkTailToken lt)
+        private void ProcessLinkTail(LinkTailToken lt)
         {
-            int matchIdx = FindKindInStack(stack, ContainerKind.Link);
+            int matchIdx = FindKindInStack(ContainerKind.Link);
 
             // Ссылка оказалась не ссылкой
             if (!lt.Closed || matchIdx < 0)
             {
                 if (matchIdx >= 0)
                     while (stack.Count > matchIdx)
-                        PopAsLiteral(stack);
-                AddText(stack, "](" + lt.Url + (lt.Closed ? ")" : ""));
+                        PopAsLiteral();
+                AddText("](" + lt.Url + (lt.Closed ? ")" : ""));
                 return;
             }
 
             while (stack.Count - 1 > matchIdx)
-                PopAsLiteral(stack);
+                PopAsLiteral();
 
-            stack[^1].Url = lt.Url;
-            CloseContainer(stack, ContainerKind.Link);
+            stack.Peek().Url = lt.Url;
+            CloseContainer(ContainerKind.Link);
         }
-    }
-
-    internal enum ContainerKind { Root, Em, Strong, Link }
-
-    internal sealed class OpenContainer
-    {
-        public ContainerKind Kind;
-        public string OpenerText = "";
-        public List<InlinePiece> Children = new();
-        public bool HasWhitespace;
-        public char? OpenerLeft;
-        public bool OpenerLeftEscaped;
-        public string Url;
     }
 }
