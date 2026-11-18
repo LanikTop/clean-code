@@ -14,11 +14,14 @@ namespace Markdown
 
             var currentIdx = 0;
             var textLength = text.Length;
+            var isLinkStarted = false;
+            var isLinkCanBeStarted = true;
 
             void FlushText(int endText)
             {
                 if (startTextTokenIdx < 0) return;
-                tokens.Add(new TextToken(text.Substring(startTextTokenIdx, endText - startTextTokenIdx)));
+                var tokenText = text.Substring(startTextTokenIdx, endText - startTextTokenIdx);
+                tokens.Add(new TextToken(tokenText, tokenText.Any(char.IsWhiteSpace)));
                 startTextTokenIdx = -1;
             }
 
@@ -35,13 +38,19 @@ namespace Markdown
                 {
                     handleResult = HandleUnderscoreToken(currentIdx, text);
                 }
-                else if (currentChar == '[')
+                else if (currentChar == '[' && !isLinkStarted && isLinkCanBeStarted)
                 {
                     handleResult = HandleBracketOpenToken(currentIdx);
+                    isLinkStarted = true;
                 }
-                else if (currentChar == ']' && currentIdx + 1 < textLength && text[currentIdx + 1] == '(')
+                else if (currentChar == ']' && currentIdx + 1 < textLength && text[currentIdx + 1] == '(' && isLinkStarted)
                 {
                     handleResult = HandleLinkTailToken(currentIdx, text);
+                    if (handleResult.token == null)
+                    {
+                        isLinkCanBeStarted = false;
+                    }
+                    isLinkStarted = false;
                 }
                 else
                 {
@@ -127,21 +136,17 @@ namespace Markdown
             var endLinkIdx = currentIdx;
             var textLength = text.Length;
 
-            while (endLinkIdx < textLength && text[endLinkIdx] != ')')
+            while (endLinkIdx < textLength && text[endLinkIdx] != ')' || text[endLinkIdx - 1] == '\\')
             {
                 endLinkIdx++;
             }
-
+                
             if (endLinkIdx < textLength)
             {
-                var token = new LinkTailToken(text.Substring(currentIdx + 2, endLinkIdx - currentIdx - 2), true);
+                var token = new LinkTailToken(text.Substring(currentIdx + 2, endLinkIdx - currentIdx - 2));
                 return (token, endLinkIdx + 1);
             }
-            else
-            {
-                var token = new LinkTailToken(text.Substring(currentIdx + 2), false);
-                return (token, textLength);
-            }
+            return (null, currentIdx + 2);
         }
 
         private static bool IsCharEscapable(char c)

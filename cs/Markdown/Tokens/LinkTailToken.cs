@@ -3,11 +3,9 @@
     internal sealed record LinkTailToken : Token
     {
         public string Url { get; }
-        public bool Closed { get; }
-        public LinkTailToken(string url, bool closed)
+        public LinkTailToken(string url)
         {
             Url = url;
-            Closed = closed;
         }
     }
 }

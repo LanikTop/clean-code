@@ -1,6 +1,7 @@
 ﻿using Markdown.InlinePieces;
 using Markdown.Models;
 using Markdown.Tokens;
+using System.Text;
 
 namespace Markdown
 {
@@ -10,6 +11,8 @@ namespace Markdown
 
         public InlinePiece[] Resolve(Token[] tokens)
         {
+            stack = new Stack<OpenContainer>();
+
             if (tokens.Length == 0)
                 return Array.Empty<InlinePiece>();
 
@@ -21,10 +24,10 @@ namespace Markdown
                 switch (token)
                 {
                     case TextToken t:
-                        AddText(t.Text);
+                        AddText(t.Text, t.HasWhitespace);
                         break;
                     case EscapedToken e:
-                        AddText(e.EscapedChar.ToString());
+                        AddText(e.EscapedChar.ToString(), false);
                         break;
                     case UnderscoreToken u:
                         ProcessUnderscore(u);
@@ -44,11 +47,11 @@ namespace Markdown
             return MergeText(root.Children.ToArray());
         }
 
-        private void AddText(string text)
+        private void AddText(string text, bool hasWhitespace)
         {
             var top = stack.Peek();
             top.Children.Add(new TextInlinePiece(text));
-            if (text.Any(char.IsWhiteSpace))
+            if (hasWhitespace)
                 top.HasWhitespace = true;
         }
 
@@ -71,7 +74,7 @@ namespace Markdown
                 }
 
                 PopAsLiteral();
-                AddText(text);
+                AddText(text, false);
                 return;
             }
 
@@ -82,9 +85,11 @@ namespace Markdown
                 var matchIdx = FindKindInStack(targetKind);
                 if (matchIdx >= 0)
                 {
-                    while (stack.Count > matchIdx)
+                    for (int i = 0; i < matchIdx; i++)
+                    {
                         PopAsLiteral();
-                    AddText(text);
+                    }
+                    AddText(text, false);
                     return;
                 }
             }
@@ -95,7 +100,7 @@ namespace Markdown
                 // Внутри одинарного двойное не работает
                 if (targetKind == ContainerKind.Strong && ContainsKind(ContainerKind.Em))
                 {
-                    AddText(text);
+                    AddText(text, false);
                     return;
                 }
 
@@ -110,7 +115,7 @@ namespace Markdown
             }
 
             // 4) Мы никто
-            AddText(text);
+            AddText(text, false);
         }
 
         private static bool CanClosePair(OpenContainer top, UnderscoreToken closer)
@@ -124,7 +129,7 @@ namespace Markdown
         private static bool IsIntrawordChar(char? c, bool isEscaped)
         {
             if (isEscaped) return false;
-            return c.HasValue && !char.IsWhiteSpace(c.Value);
+            return c.HasValue && !char.IsWhiteSpace(c.Value) && char.IsLetterOrDigit(c.Value);
         }
 
         private void CloseContainer(ContainerKind kind)
@@ -147,13 +152,30 @@ namespace Markdown
         private static InlinePiece[] MergeText(InlinePiece[] pieces)
         {
             var result = new List<InlinePiece>();
+            var textBuffer = new StringBuilder();
+
+            void FlushBuffer()
+            {
+                if (textBuffer.Length > 0)
+                {
+                    result.Add(new TextInlinePiece(textBuffer.ToString()));
+                    textBuffer.Clear();
+                }
+            }
+
             foreach (var p in pieces)
             {
-                if (p is TextInlinePiece t && result.Count > 0 && result[^1] is TextInlinePiece last)
-                    result[^1] = new TextInlinePiece(last.Text + t.Text);
+                if (p is TextInlinePiece t)
+                {
+                    textBuffer.Append(t.Text);
+                }
                 else
+                {
+                    FlushBuffer();
                     result.Add(p);
+                }
             }
+            FlushBuffer();
             return result.ToArray();
         }
 
@@ -169,7 +191,7 @@ namespace Markdown
 
         private int FindKindInStack(ContainerKind kind)
         {
-            var depth = 1;
+            var depth = 0;
 
             foreach (var c in stack)
             {
@@ -191,18 +213,10 @@ namespace Markdown
         {
             int matchIdx = FindKindInStack(ContainerKind.Link);
 
-            // Ссылка оказалась не ссылкой
-            if (!lt.Closed || matchIdx < 0)
+            for (int i = 0; i < matchIdx; i++)
             {
-                if (matchIdx >= 0)
-                    while (stack.Count > matchIdx)
-                        PopAsLiteral();
-                AddText("](" + lt.Url + (lt.Closed ? ")" : ""));
-                return;
-            }
-
-            while (stack.Count - 1 > matchIdx)
                 PopAsLiteral();
+            }
 
             stack.Peek().Url = lt.Url;
             CloseContainer(ContainerKind.Link);

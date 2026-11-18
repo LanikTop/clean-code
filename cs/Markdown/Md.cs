@@ -4,7 +4,7 @@
     {
         public static string Render(string text)
         {
-            var rawBlocks = new RawBlockParser().Parse(text);
+            var rawBlocks = RawBlockParser.Parse(text);
             var renderedBlocks = rawBlocks.Select(InlineParser.Parse).ToArray();
             return HtmlRenderer.Render(renderedBlocks);
         }

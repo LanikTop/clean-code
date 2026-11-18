@@ -45,7 +45,7 @@ namespace Markdown.Tests.Tests
         public void InlineResolver_Resolve_ReturnsExpectedPiecesSmallTests()
         {
             ComparisonPieces(new InlineResolver().Resolve(new Token[] {
-                new TextToken("Heading")
+                new TextToken("Heading", false)
             }),
             new InlinePiece[]
             {
@@ -53,9 +53,9 @@ namespace Markdown.Tests.Tests
             });
 
             ComparisonPieces(new InlineResolver().Resolve(new Token[] {
-                new TextToken("Heading "),
+                new TextToken("Heading ", true),
                 new UnderscoreToken(1, ' ', 'W'),
-                new TextToken("With em text"),
+                new TextToken("With em text", true),
                 new UnderscoreToken(1, 't', null)
                 }),
                 new InlinePiece[]
@@ -65,9 +65,9 @@ namespace Markdown.Tests.Tests
                 });
 
             ComparisonPieces(new InlineResolver().Resolve(new Token[] {
-                new TextToken("Heading "),
+                new TextToken("Heading ", true),
                 new UnderscoreToken(2, ' ', 'W'),
-                new TextToken("With strong text"),
+                new TextToken("With strong text", true),
                 new UnderscoreToken(2, 't', null)
                 }),
                 new InlinePiece[]
@@ -78,13 +78,13 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken("abc "),
+                    new TextToken("abc ", true),
                     new UnderscoreToken(1, ' ', 'e'),
-                    new TextToken("em"),
+                    new TextToken("em", false),
                     new UnderscoreToken(1, 'm', ' '),
-                    new TextToken(" "),
+                    new TextToken(" ", true),
                     new UnderscoreToken(2, ' ', 's'),
-                    new TextToken("strong"),
+                    new TextToken("strong", false),
                     new UnderscoreToken(2, 'g', null)
                 }),
                 new InlinePiece[]
@@ -99,7 +99,7 @@ namespace Markdown.Tests.Tests
                 new Token[] {
                     new EscapedToken('_'),
                     new UnderscoreToken(1, '_', 'в', true, false),
-                    new TextToken(@"вот это будет выделено Em, а не Strong тегом"),
+                    new TextToken(@"вот это будет выделено Em, а не Strong тегом", true),
                     new UnderscoreToken(1, 'м', '\\', false, true),
                     new EscapedToken('_')
                 }),
@@ -121,8 +121,8 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new BracketOpenToken(),
-                    new TextToken(@"abc"),
-                    new LinkTailToken(@"qwerty", true)
+                    new TextToken(@"abc", false),
+                    new LinkTailToken(@"qwerty")
                 }),
                 new InlinePiece[]
                 {
@@ -132,8 +132,9 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new BracketOpenToken(),
-                    new TextToken(@"abc"),
-                    new LinkTailToken(@"qwer", false)
+                    new TextToken(@"abc", false),
+                    new TextToken(@"](", false),
+                    new TextToken(@"qwer", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -143,7 +144,7 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new BracketOpenToken(),
-                    new TextToken(@"abc]")
+                    new TextToken(@"abc]", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -153,8 +154,8 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new BracketOpenToken(),
-                    new TextToken(@"abc"),
-                    new LinkTailToken(@"qw_ert_y", true)
+                    new TextToken(@"abc", false),
+                    new LinkTailToken(@"qw_ert_y")
                 })
                 ,new InlinePiece[]
                 {
@@ -165,9 +166,9 @@ namespace Markdown.Tests.Tests
                 new Token[] {
                     new BracketOpenToken(),
                     new UnderscoreToken(1, '[', 'a'),
-                    new TextToken(@"abc"),
+                    new TextToken(@"abc", false),
                     new UnderscoreToken(1, 'c', ']'),
-                    new LinkTailToken(@"qwerty", true)
+                    new LinkTailToken(@"qwerty")
                 })
                 ,new InlinePiece[]
                 {
@@ -177,8 +178,8 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new EscapedToken('['),
-                    new TextToken(@"abc"),
-                    new LinkTailToken(@"qwerty", true)
+                    new TextToken(@"abc", false),
+                    new TextToken(@"](qwerty)", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -189,8 +190,8 @@ namespace Markdown.Tests.Tests
                 new Token[] {
                     new EscapedToken('\\'),
                     new BracketOpenToken(),
-                    new TextToken("abc"),
-                    new LinkTailToken("qwerty", true)
+                    new TextToken("abc", false),
+                    new LinkTailToken("qwerty")
                 })
                 ,new InlinePiece[]
                 {
@@ -204,7 +205,7 @@ namespace Markdown.Tests.Tests
         {
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Спецификация языка разметки")
+                    new TextToken(@"Спецификация языка разметки", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -213,7 +214,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Посмотрите этот файл в сыром виде. Сравните с тем, что показывает github. Все совпадения случайны ;)")
+                    new TextToken(@"Посмотрите этот файл в сыром виде. Сравните с тем, что показывает github. Все совпадения случайны ;)", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -222,7 +223,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Курсив")
+                    new TextToken(@"Курсив", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -231,11 +232,11 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Текст, "),
+                    new TextToken(@"Текст, ", true),
                     new UnderscoreToken(1, ' ', 'о'),
-                    new TextToken(@"окруженный с двух сторон"),
+                    new TextToken(@"окруженный с двух сторон", true),
                     new UnderscoreToken(1, 'н', ' '),
-                    new TextToken(@" одинарными символами подчерка, должен помещаться в HTML-тег \<em> вот так:")
+                    new TextToken(@" одинарными символами подчерка, должен помещаться в HTML-тег \<em> вот так:", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -246,7 +247,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Текст, \<em>окруженный с двух сторон\</em> одинарными символами подчерка, должен помещаться в HTML-тег \<em>.")
+                    new TextToken(@"Текст, \<em>окруженный с двух сторон\</em> одинарными символами подчерка, должен помещаться в HTML-тег \<em>.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -255,7 +256,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Полужирный")
+                    new TextToken(@"Полужирный", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -265,9 +266,9 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new UnderscoreToken(2, null, 'В'),
-                    new TextToken(@"Выделенный двумя символами текст"),
+                    new TextToken(@"Выделенный двумя символами текст", true),
                     new UnderscoreToken(2, 'т', ' '),
-                    new TextToken(@" должен становиться полужирным с помощью тега \<strong>.")
+                    new TextToken(@" должен становиться полужирным с помощью тега \<strong>.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -277,7 +278,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Экранирование")
+                    new TextToken(@"Экранирование", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -286,11 +287,11 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Любой символ можно экранировать, чтобы он не считался частью разметки. "),
+                    new TextToken(@"Любой символ можно экранировать, чтобы он не считался частью разметки. ", true),
                     new EscapedToken('_'),
-                    new TextToken(@"Вот это"),
+                    new TextToken(@"Вот это", true),
                     new EscapedToken('_'),
-                    new TextToken(@", не должно выделиться тегом \<em>.")
+                    new TextToken(@", не должно выделиться тегом \<em>.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -299,7 +300,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Символ экранирования исчезает из результата, только если экранирует что-то. Здесь сим\волы экранирования\ \должны остаться.\")
+                    new TextToken(@"Символ экранирования исчезает из результата, только если экранирует что-то. Здесь сим\волы экранирования\ \должны остаться.\", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -308,12 +309,12 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Символ экранирования тоже можно экранировать: "),
+                    new TextToken(@"Символ экранирования тоже можно экранировать: ", true),
                     new EscapedToken('\\'),
                     new UnderscoreToken(1, '\\', 'в', true, false),
-                    new TextToken(@"вот это будет выделено тегом"),
+                    new TextToken(@"вот это будет выделено тегом", true),
                     new UnderscoreToken(1, 'м', ' '),
-                    new TextToken(@" \<em>")
+                    new TextToken(@" \<em>", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -324,7 +325,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Взаимодействие тегов")
+                    new TextToken(@"Взаимодействие тегов", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -333,15 +334,15 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Внутри "),
+                    new TextToken(@"Внутри ", true),
                     new UnderscoreToken(2, ' ', 'д'),
-                    new TextToken(@"двойного выделения "),
+                    new TextToken(@"двойного выделения ", true),
                     new UnderscoreToken(1, ' ', 'о'),
-                    new TextToken(@"одинарное"),
+                    new TextToken(@"одинарное", false),
                     new UnderscoreToken(1, 'е', ' '),
-                    new TextToken(@" тоже"),
+                    new TextToken(@" тоже", true),
                     new UnderscoreToken(2, 'е', ' '),
-                    new TextToken(@" работает.")
+                    new TextToken(@" работает.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -356,15 +357,15 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Но не наоборот — внутри "),
+                    new TextToken(@"Но не наоборот — внутри ", true),
                     new UnderscoreToken(1, ' ', 'о'),
-                    new TextToken(@"одинарного "),
+                    new TextToken(@"одинарного ", false),
                     new UnderscoreToken(2, ' ', 'д'),
-                    new TextToken(@"двойное"),
+                    new TextToken(@"двойное", false),
                     new UnderscoreToken(2, 'е', ' '),
-                    new TextToken(@" не"),
+                    new TextToken(@" не", true),
                     new UnderscoreToken(1, 'е', ' '),
-                    new TextToken(@" работает."),
+                    new TextToken(@" работает.", true),
                 })
                 ,new InlinePiece[]
                 {
@@ -377,7 +378,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Подчерки внутри текста c цифрами_12_3 не считаются выделением и должны оставаться символами подчерка.")
+                    new TextToken(@"Подчерки внутри текста c цифрами_12_3 не считаются выделением и должны оставаться символами подчерка.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -386,17 +387,17 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Однако выделять часть слова они могут: и в "),
+                    new TextToken(@"Однако выделять часть слова они могут: и в ", true),
                     new UnderscoreToken(1, ' ', 'н'),
-                    new TextToken(@"нач"),
+                    new TextToken(@"нач", false),
                     new UnderscoreToken(1, 'ч', 'а'),
-                    new TextToken(@"але, и в сер"),
+                    new TextToken(@"але, и в сер", true),
                     new UnderscoreToken(1, 'р', 'е'),
-                    new TextToken(@"еди"),
+                    new TextToken(@"еди", false),
                     new UnderscoreToken(1, 'и', 'н'),
-                    new TextToken(@"не, и в кон"),
+                    new TextToken(@"не, и в кон", true),
                     new UnderscoreToken(1, 'н', 'ц'),
-                    new TextToken(@"це."),
+                    new TextToken(@"це.", false),
                     new UnderscoreToken(1, '.', null)
                 })
                 ,new InlinePiece[]
@@ -411,11 +412,11 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"В то же время выделение в ра"),
+                    new TextToken(@"В то же время выделение в ра", true),
                     new UnderscoreToken(1, 'а', 'з'),
-                    new TextToken(@"зных сл"),
+                    new TextToken(@"зных сл", true),
                     new UnderscoreToken(1, 'л', 'о'),
-                    new TextToken(@"овах не работает."),
+                    new TextToken(@"овах не работает.", true),
                 })
                 ,new InlinePiece[]
                 {
@@ -425,9 +426,9 @@ namespace Markdown.Tests.Tests
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
                     new UnderscoreToken(2, null, 'Н'),
-                    new TextToken(@"Непарные"),
+                    new TextToken(@"Непарные", false),
                     new UnderscoreToken(1, 'е', ' '),
-                    new TextToken(@" символы в рамках одного абзаца не считаются выделением."),
+                    new TextToken(@" символы в рамках одного абзаца не считаются выделением.", true),
                 })
                 ,new InlinePiece[]
                 {
@@ -436,11 +437,11 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"За подчерками, начинающими выделение, должен следовать непробельный символ. Иначе эти"),
+                    new TextToken(@"За подчерками, начинающими выделение, должен следовать непробельный символ. Иначе эти", true),
                     new UnderscoreToken(1, 'и', ' '),
-                    new TextToken(@" подчерки"),
+                    new TextToken(@" подчерки", true),
                     new UnderscoreToken(1, 'и', ' '),
-                    new TextToken(@" не считаются выделением и остаются просто символами подчерка."),
+                    new TextToken(@" не считаются выделением и остаются просто символами подчерка.", true),
                 })
                 ,new InlinePiece[]
                 {
@@ -449,13 +450,13 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Подчерки, заканчивающие выделение, должны следовать за непробельным символом. Иначе эти "),
+                    new TextToken(@"Подчерки, заканчивающие выделение, должны следовать за непробельным символом. Иначе эти ", true),
                     new UnderscoreToken(1, ' ', 'п'),
-                    new TextToken(@"подчерки "),
+                    new TextToken(@"подчерки ", true),
                     new UnderscoreToken(1, ' ', 'н'),
-                    new TextToken(@"не считаются"),
+                    new TextToken(@"не считаются", true),
                     new UnderscoreToken(1, 'я', ' '),
-                    new TextToken(@" окончанием выделения и остаются просто символами подчерка.")
+                    new TextToken(@" окончанием выделения и остаются просто символами подчерка.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -466,15 +467,15 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"В случае "),
+                    new TextToken(@"В случае ", true),
                     new UnderscoreToken(2, ' ', 'п'),
-                    new TextToken(@"пересечения "),
+                    new TextToken(@"пересечения ", true),
                     new UnderscoreToken(1, ' ', 'д'),
-                    new TextToken(@"двойных"),
+                    new TextToken(@"двойных", false),
                     new UnderscoreToken(2, 'х', ' '),
-                    new TextToken(@" и одинарных"),
+                    new TextToken(@" и одинарных", true),
                     new UnderscoreToken(1, 'х', ' '),
-                    new TextToken(@" подчерков ни один из них не считается выделением.")
+                    new TextToken(@" подчерков ни один из них не считается выделением.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -483,7 +484,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Если внутри подчерков пустая строка ____, то они остаются символами подчерка.")
+                    new TextToken(@"Если внутри подчерков пустая строка ____, то они остаются символами подчерка.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -492,7 +493,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Заголовки")
+                    new TextToken(@"Заголовки", false)
                 })
                 ,new InlinePiece[]
                 {
@@ -501,7 +502,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Абзац, начинающийся с ""# "", выделяется тегом \<h1> в заголовок. В тексте заголовка могут присутствовать все прочие символы разметки с указанными правилами.")
+                    new TextToken(@"Абзац, начинающийся с ""# "", выделяется тегом \<h1> в заголовок. В тексте заголовка могут присутствовать все прочие символы разметки с указанными правилами.", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -510,7 +511,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Таким образом")
+                    new TextToken(@"Таким образом", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -519,13 +520,13 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"Заголовок "),
+                    new TextToken(@"Заголовок ", true),
                     new UnderscoreToken(2, ' ', 'с'),
-                    new TextToken(@"с "),
+                    new TextToken(@"с ", true),
                     new UnderscoreToken(1, ' ', 'р'),
-                    new TextToken(@"разными"),
+                    new TextToken(@"разными", false),
                     new UnderscoreToken(1, 'и', ' '),
-                    new TextToken(@" символами"),
+                    new TextToken(@" символами", true),
                     new UnderscoreToken(2, 'и', null)
                 })
                 ,new InlinePiece[]
@@ -541,7 +542,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"превратится в:")
+                    new TextToken(@"превратится в:", true)
                 })
                 ,new InlinePiece[]
                 {
@@ -550,7 +551,7 @@ namespace Markdown.Tests.Tests
 
             ComparisonPieces(new InlineResolver().Resolve(
                 new Token[] {
-                    new TextToken(@"\<h1>Заголовок \<strong>с \<em>разными\</em> символами\</strong>\</h1>"),
+                    new TextToken(@"\<h1>Заголовок \<strong>с \<em>разными\</em> символами\</strong>\</h1>", true),
                 })
                 ,new InlinePiece[]
                 {

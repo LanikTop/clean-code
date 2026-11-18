@@ -3,6 +3,11 @@
     internal sealed record TextToken : Token
     {
         public string Text { get; }
-        public TextToken(string text) { Text = text; }
+        public bool HasWhitespace { get; }
+        public TextToken(string text, bool hasWhitespace)
+        {
+            Text = text;
+            HasWhitespace = hasWhitespace;
+        }
     }
 }

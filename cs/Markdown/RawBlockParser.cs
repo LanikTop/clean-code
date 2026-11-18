@@ -2,15 +2,22 @@
 
 namespace Markdown
 {
-    internal class RawBlockParser
+    internal static class RawBlockParser
     {
-        private List<string> paragraphBuffer = new();
-        private List<RawBlock> blocks = new();
-
-        public RawBlock[] Parse(string text)
+        public static RawBlock[] Parse(string text)
         {
             if (string.IsNullOrEmpty(text))
                 return Array.Empty<RawBlock>();
+
+            var paragraphBuffer = new List<string>();
+            var blocks = new List<RawBlock>();
+
+            void TryCreateParagraphBlock()
+            {
+                if (paragraphBuffer.Count == 0) return;
+                blocks.Add(new RawBlock(BlockType.Paragraph, string.Join(" ", paragraphBuffer)));
+                paragraphBuffer.Clear();
+            }
 
             foreach (var line in text.Split(Environment.NewLine))
             {
@@ -34,13 +41,6 @@ namespace Markdown
 
             TryCreateParagraphBlock();
             return blocks.ToArray();
-        }
-
-        private void TryCreateParagraphBlock()
-        {
-            if (paragraphBuffer.Count == 0) return;
-            blocks.Add(new RawBlock(BlockType.Paragraph, string.Join(" ", paragraphBuffer)));
-            paragraphBuffer.Clear();
         }
     }
 }
